@@ -126,8 +126,16 @@ namespace BardTactics
         private void MoveUnit(UnitController unit, int x, int y)
         {
             unit.SetTilePosition(x, y, grid);
-            unit.Acted = true;
-            ClearSelection();
+            selectedUnit = unit;
+            moveTiles.Clear();
+            targetTiles.Clear();
+            targetTiles.AddRange(GetAttackableEnemyTiles(unit));
+
+            if (targetTiles.Count == 0)
+            {
+                unit.Acted = true;
+                ClearSelection();
+            }
         }
 
         private void ClearSelection()
