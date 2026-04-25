@@ -1203,7 +1203,10 @@ class BattleScene extends Phaser.Scene {
 
     const onUnitPointerDown = (_pointer, _localX, _localY, event) => {
       if (event) event.stopPropagation();
-      this.handleBoardTileClick(unit.x, unit.y);
+      this.input.emit("pointerdown", {
+        x: this.boardX + unit.x * TILE_SIZE + TILE_SIZE / 2,
+        y: this.boardY + unit.y * TILE_SIZE + TILE_SIZE / 2,
+      });
     };
     clickHitbox.on("pointerdown", onUnitPointerDown);
 
@@ -1239,17 +1242,12 @@ class BattleScene extends Phaser.Scene {
 
   setupInput() {
     this.input.on("pointerdown", (pointer) => {
+      if (this.phase !== "player" || this.busy || this.previewOpen) return;
+
       const tile = this.pointerToTile(pointer.x, pointer.y);
       if (!tile) return;
-      this.handleBoardTileClick(tile.x, tile.y);
-    });
-  }
-
-  handleBoardTileClick(tileX, tileY) {
-    if (this.phase !== "player" || this.busy || this.previewOpen) return;
-
-    const clickedUnit = this.getUnitAt(tileX, tileY);
-    const selectedUnit = this.getSelectedUnit();
+      const clickedUnit = this.getUnitAt(tile.x, tile.y);
+      const selectedUnit = this.getSelectedUnit();
 
       if (clickedUnit && clickedUnit.team === "player" && !clickedUnit.acted) {
         this.selectedUnitId = clickedUnit.id;
@@ -1261,22 +1259,23 @@ class BattleScene extends Phaser.Scene {
         return;
       }
 
-    if (
-      selectedUnit &&
-      clickedUnit &&
-      clickedUnit.team === "enemy" &&
-      this.isTargetTile(clickedUnit.x, clickedUnit.y)
-    ) {
-      this.openPreview(selectedUnit, clickedUnit);
-      return;
-    }
+      if (
+        selectedUnit &&
+        clickedUnit &&
+        clickedUnit.team === "enemy" &&
+        this.isTargetTile(clickedUnit.x, clickedUnit.y)
+      ) {
+        this.openPreview(selectedUnit, clickedUnit);
+        return;
+      }
 
-    if (selectedUnit && this.isMoveTile(tileX, tileY)) {
-      this.moveUnit(selectedUnit.id, tileX, tileY);
-      return;
-    }
+      if (selectedUnit && this.isMoveTile(tile.x, tile.y)) {
+        this.moveUnit(selectedUnit.id, tile.x, tile.y);
+        return;
+      }
 
-    this.clearSelection();
+      this.clearSelection();
+    });
   }
 
   pointerToTile(pointerX, pointerY) {
