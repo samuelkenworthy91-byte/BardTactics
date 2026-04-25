@@ -1190,11 +1190,27 @@ class BattleScene extends Phaser.Scene {
     return fallback;
   }
   createUnitSprite(unit) {
-    const marker =
-    this.createUnitBoardSprite(unit, 0, 0);
-const clickHitbox = this.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE, 0xffffff, 0.001);
-clickHitbox.setInteractive({ useHandCursor: true });
-const label = this.add.text(
+    const marker = this.createUnitBoardSprite(unit, 0, 0);
+    const clickHitbox = this.add.rectangle(
+      0,
+      0,
+      TILE_SIZE,
+      TILE_SIZE,
+      0xffffff,
+      0
+    );
+    clickHitbox.setInteractive({ useHandCursor: true });
+
+    const onUnitPointerDown = (_pointer, _localX, _localY, event) => {
+      if (event) event.stopPropagation();
+      this.input.emit("pointerdown", {
+        x: this.boardX + unit.x * TILE_SIZE + TILE_SIZE / 2,
+        y: this.boardY + unit.y * TILE_SIZE + TILE_SIZE / 2,
+      });
+    };
+    clickHitbox.on("pointerdown", onUnitPointerDown);
+
+    const label = this.add.text(
       unit.team === "player" ? -9 : -8,
       -10,
       unit.team === "player" ? unit.name[0] : unit.boss ? "B" : "T",
@@ -1210,7 +1226,7 @@ const label = this.add.text(
       color: "#e5e7eb",
     });
 
-    const container = this.add.container(0, 0, [clickHitbox,marker, label, hpText]);
+    const container = this.add.container(0, 0, [clickHitbox, marker, label, hpText]);
     return { container, marker, hpText };
   }
 
@@ -1230,7 +1246,6 @@ const label = this.add.text(
 
       const tile = this.pointerToTile(pointer.x, pointer.y);
       if (!tile) return;
-
       const clickedUnit = this.getUnitAt(tile.x, tile.y);
       const selectedUnit = this.getSelectedUnit();
 
