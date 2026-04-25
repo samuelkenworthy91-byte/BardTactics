@@ -1160,6 +1160,24 @@ class BattleScene extends Phaser.Scene {
   
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(sourceImage, x, y, w, h, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const pixels = imageData.data;
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
+
+        if (a === 0) continue;
+
+        // Remove sheet background around idle crops by keying near-white pixels to transparent.
+        if (r >= 245 && g >= 245 && b >= 245) {
+          pixels[i + 3] = 0;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
   
       canvasTexture.refresh();
     });
@@ -1197,18 +1215,17 @@ class BattleScene extends Phaser.Scene {
       TILE_SIZE,
       TILE_SIZE,
       0xffffff,
-      0
+      0.001
     );
     clickHitbox.setInteractive({ useHandCursor: true });
+    marker.setInteractive({ useHandCursor: true });
 
     const onUnitPointerDown = (_pointer, _localX, _localY, event) => {
       if (event) event.stopPropagation();
-      this.input.emit("pointerdown", {
-        x: this.boardX + unit.x * TILE_SIZE + TILE_SIZE / 2,
-        y: this.boardY + unit.y * TILE_SIZE + TILE_SIZE / 2,
-      });
+      this.handleBoardTileClick(unit.x, unit.y);
     };
     clickHitbox.on("pointerdown", onUnitPointerDown);
+    marker.on("pointerdown", onUnitPointerDown);
 
     const label = this.add.text(
       unit.team === "player" ? -9 : -8,
@@ -1242,12 +1259,17 @@ class BattleScene extends Phaser.Scene {
 
   setupInput() {
     this.input.on("pointerdown", (pointer) => {
-      if (this.phase !== "player" || this.busy || this.previewOpen) return;
-
       const tile = this.pointerToTile(pointer.x, pointer.y);
       if (!tile) return;
-      const clickedUnit = this.getUnitAt(tile.x, tile.y);
-      const selectedUnit = this.getSelectedUnit();
+      this.handleBoardTileClick(tile.x, tile.y);
+    });
+  }
+
+  handleBoardTileClick(tileX, tileY) {
+    if (this.phase !== "player" || this.busy || this.previewOpen) return;
+
+    const clickedUnit = this.getUnitAt(tileX, tileY);
+    const selectedUnit = this.getSelectedUnit();
 
       if (clickedUnit && clickedUnit.team === "player" && !clickedUnit.acted) {
         this.selectedUnitId = clickedUnit.id;
@@ -1259,23 +1281,22 @@ class BattleScene extends Phaser.Scene {
         return;
       }
 
-      if (
-        selectedUnit &&
-        clickedUnit &&
-        clickedUnit.team === "enemy" &&
-        this.isTargetTile(clickedUnit.x, clickedUnit.y)
-      ) {
-        this.openPreview(selectedUnit, clickedUnit);
-        return;
-      }
+    if (
+      selectedUnit &&
+      clickedUnit &&
+      clickedUnit.team === "enemy" &&
+      this.isTargetTile(clickedUnit.x, clickedUnit.y)
+    ) {
+      this.openPreview(selectedUnit, clickedUnit);
+      return;
+    }
 
-      if (selectedUnit && this.isMoveTile(tile.x, tile.y)) {
-        this.moveUnit(selectedUnit.id, tile.x, tile.y);
-        return;
-      }
+    if (selectedUnit && this.isMoveTile(tileX, tileY)) {
+      this.moveUnit(selectedUnit.id, tileX, tileY);
+      return;
+    }
 
-      this.clearSelection();
-    });
+    this.clearSelection();
   }
 
   pointerToTile(pointerX, pointerY) {
