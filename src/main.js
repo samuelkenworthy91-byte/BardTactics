@@ -1197,7 +1197,7 @@ class BattleScene extends Phaser.Scene {
       TILE_SIZE,
       TILE_SIZE,
       0xffffff,
-      0
+      0.001
     );
     clickHitbox.setInteractive({ useHandCursor: true });
 
